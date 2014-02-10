@@ -1,27 +1,23 @@
 ### Purpose
 
-The program is a SAS macro that takes a dataset of therapies - with start and end dates - to determine where the therapies overlap and output all therapy combinations.  
+The core of the porject is a SAS macro that takes a dataset of therapies - with start and end dates - to determine where the therapies overlap and output all therapy combinations.  
 
-### Program Structure
-The program not only has the macro but includes example data and analysis code.  The program is structured as follows:
+### Programs
+There are three programs in the project; one with the macro and two support files with example data and analysis code.
 
-+ **Example Data:**  The start shows the creation of two datasets: one patient level, the other at therapy level.
+The header of each file provides is sufficient foe use.  However, the header for the macro file itself is dense so much of it is repeated here so it's easier to read.
 
- + ***Patient level:*** All that's needed is 1 row per patient with their start and end dates for their analysis period (*obs_start* and *obs_end* respectively).
- The macro ensures only therapies starting or ending in the analysis period are used (although see the later note on MPR dates).
+### Macro
 
- + ***Therapy level:***  One row per therapy.  Each therapy must have a label and a start and end date.
+The macro is called *create_combi_thers* and takes the following parameters:-
 
-+ **Macro:**  The macro - called *create_combi_thers* - is compiled next.  You would copy the macro - ***and the datastep before it*** - into your own code if using it elsewhere.
-  
-  The macro takes the following parameters:-
- + ***Data:*** The name of the input dataset.
- + ***Out_prim:*** = Name of the primary output datset.
- + ***Out_sec:*** = Name of the secondary output datset.
- + ***Gap_days:*** = Number of days between therapies before subsequent therapy is considered a new treatment block (affecting the *trtmt_blk* variable).  Default is 1 day.
++ ***Data:*** The name of the input dataset.  It must feature one row per day per therapy.  See the 'example data' program in the repository for guidance on the input data.
 
-+ **Macro Call:** The program shows the macro called twice; once for PDC dates and once for MPR ones.  See the note later for a description of the distinction.
-+ **Example Code:** The output datasets can be used and analysed in many ways.  There is example code at the end of the program showing some common analyses.   
++ ***Gap_days:*** Number of days between therapies before subsequent therapy is considered a new treatment block.  Default is **1 day**.  (This affects the *trtmt_blk* variable).  
+
++ ***Out_prim:*** Name of the primary output datset.
+
++ ***Out_sec:*** Name of the secondary output datset.
 
 ### Output datasets
 
