@@ -126,7 +126,7 @@
 
   options nodate nonumber nocenter pageno=1 obs=max nofmterr ps=52 ls=100 fmtsearch=(codes);
   options dsoptions=note2err mergenoby=warn msglevel=i;
-  options formchar="|----|+|---+=|-/\<*";
+  options formchar="|----|+|---+=|-/\<>*";
   ods noproctitle;
 
   %macro create_combi_thers(data = combo2a_PDC_row_per_day_per_ther, gap_days = 1, out_prim =, out_sec =);
@@ -197,7 +197,7 @@
         else a[i] = '';                                                 %* ...else ensure the array cell is empty;
       end;
 
-      if max_thers_for_day  1 then do num_thers = 1 to max_thers_for_day;    **  Loop for the no of compounds on the day;
+      if max_thers_for_day > 1 then do num_thers = 1 to max_thers_for_day;    **  Loop for the no of compounds on the day;
         do k = 1 to comb(max_thers_for_day, num_thers);   %*  Loop through each combination (incl subsets);
           call lexcomb(k, num_thers, of a[*]);            %*  Get the combination of compounds (array cells are rearranged);
 
@@ -240,7 +240,7 @@
       end;
 
       attrib trtmt_blk length=5 label = "Trtmt_blk: Blocks of consec trtmt. Gap allowed is &gap_days day/s.";
-      if date - &gap_days  lag(date) then trtmt_blk ++ 1;
+      if date - &gap_days > lag(date) then trtmt_blk ++ 1;
 
       **  Ensure the vars are reset when starting a new patient;
       if first.patid then do; 
@@ -290,7 +290,7 @@
       by patid ther_combo;
 
       attrib trtmt_blk length=5 label = "trtmt_blk: Blocks of consec trtmt (within trtmt). Gap allowed is &gap_days day/s.";
-      if date - &gap_days  lag(date) then trtmt_blk ++ 1;
+      if date - &gap_days > lag(date) then trtmt_blk ++ 1;
       if first.ther_combo then trtmt_blk = 1;
     run;
 
