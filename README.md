@@ -5,7 +5,7 @@ The core of the porject is a SAS macro that takes a dataset of therapies - with 
 ### Programs
 There are three programs in the project; one with the macro and two support files with example data and analysis code.
 
-The header of each file provides is sufficient for use.  However, the header for the macro file itself is dense so much of it is repeated here so it's easier to read.
+The header of each file provides is sufficient for use.  However, the header for the macro file itself is dense so much of it is repeated here for easier reading.
 
 ### Macro
 
