@@ -8,10 +8,13 @@
 
   This program is part of the suite of programs for determining combination
   therapies.  These programs are stored on Github using the version control
-  system Git.  To read about the combination therapies algorithm, view the 
-  readme file in the Git repository:-
+  system Git:-
 
-  https://github.com/rambles/combo_therapies
+    https://github.com/rambles/combo_therapies
+
+  To read about the algorithm, view the readme file in the Git repository:-
+
+    http://bit.ly/1fU3UTc
 
   ### Purpose
 
