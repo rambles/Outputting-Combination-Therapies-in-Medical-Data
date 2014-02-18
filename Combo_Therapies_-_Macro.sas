@@ -74,7 +74,7 @@
   | Both        | num_days       | Number of days
   | Both        | prop_days      | Proportion of days relative to total pd for pat
   | Both        | ther_combo     | Therapy combination
-  | Both        | num_thers      | Num thers for combo
+  | Both        | Num_comps      | Num thers for combo
   | Both        | ther_start     | Start date of therapy combo
   | Both        | ther_end       | End date of therapy combo
   | Both        | trtmt_blk      | Blocks of consec trtmt. Gap allowed is *xx* day/s.
@@ -125,87 +125,86 @@
 
 ********************************************************************************/
 
-  options comamid=tcp remote=x nodate nonumber nocenter pageno=1 mergenoby=warn msglevel=i obs=max nofmterr ps=54 ls=100;
-
-  options nodate nonumber nocenter pageno=1 obs=max nofmterr ps=52 ls=100 fmtsearch=(codes);
-  options dsoptions=note2err mergenoby=warn msglevel=i;
-  options formchar="|----|+|---+=|-/\<>*";
-  ods noproctitle;
-
   %macro create_combi_thers(data = combo2a_PDC_row_per_day_per_ther, gap_days = 1, out_prim =, out_sec =);
 
     %*  Uncomment when debugging;
-/*    %let data = combo2a_PDC_row_per_day_per_ther;*/
-/*    %let out_prim = m_row_per_trtmt_change_or_brk;*/
-/*    %let out_sec = m_summarised_inclusive_thers;*/
-/*    %let gap_days = 1;*/
+    %let data = combo2a_PDC_row_per_day_per_ther;
+    %let out_prim = m_row_per_trtmt_change_or_brk;
+    %let out_sec = m_summarised_inclusive_thers;
+    %let gap_days = 1;
 
-    %*  Sort the data as needed.  NODUPKEY is unlikley needed here nut is given, just in case.; 
-    %*  NOTE: Within day, the descending stmt ensures the most complex therapy is first.  This is;
-    %*  saved as the "Primary Therapy" in the next datastep - this helps determine if dual compounds; 
-    %*  are prescribed directly (e.g. ics/laba) %*  or if the come from individual scripts.;
-    proc sort data = &data out = m_combo1_input_data nodupkey;
-      by patid date descending num_thers therapy;
-    run;
+    %*  Join together all therapy compounds per day into one string.  The HASH ensures the compounds;
+    %*  are deduped and joing in alphabetical order.  Output is 1 row per patient per day.; 
+    data m_combo1_dedupe_therapies (drop = i rc ther therapy prim Num_comps);
+      length ther prim primary_ther $30 all_thers $120;
 
-    %*  Compares all therapies in a day (there could be multiple rows for a day); 
-    %*  to ensure therapies are not repeated.; 
-    data m_combo2_dedupe_therapies(drop = a i j ther_unit all_ther_unit drop_flag therapy num_thers);
-      set m_combo1_input_data;
-      by patid date descending num_thers therapy;
-      array ther_arr[10] $400 _temporary_;
+      attrib primary_ther length = $30 label = "Primary_Ther: Most complex original script for pd to check dual/ther compounds origin.";
+      attrib num_scripts length = 3 label = "Num_Scripts: Num scripts contributing to pd.  Counts dupes if dupes in orig data.";
 
-      attrib primary_ther length = $50 label = "Primary_Ther: Most complex original script for pd to check dual/ther compounds origin.";
-      length ther_unit all_ther_unit $50 all_thers $200 ;
-      retain all_thers primary_ther "";
+      declare hash pat_thers(ordered:'a');    %*  Declare a hash with only therapy name as a var;
+        pat_thers.definekey('ther');          %*  Therapy name is also made KEY so there are no duplicates;
+        pat_thers.definedone();               %*  Also, this means THERAPY NAMES are stored in alphabetical order;
+      declare hiter iter("pat_thers");        %*  Finally create an ITERATOR to go through the HASH at the end of each date;
 
-      if first.date then do a = 1 to dim(ther_arr);  %*  Make copy of thers, looping to ensure alpha order;
-        ther_arr[a] = scan(therapy, a, '/');
+      do until (eof);
+        set &data end = eof;
+        by patid date;
+        num_scripts ++ 1;
 
-        if a = dim(ther_arr) then do;
-          call sortc(of ther_arr[*]);
-          all_thers = catx('/', of ther_arr[*]);
-          primary_ther = ifc(find(all_thers, '/'), all_thers, '[ Indiv Compounds ]');
+        prim = ifc(countc(therapy, '/') > countc(prim, '/'), therapy, prim);  %*  Ensure most complex script for day is saved;
+
+        do i = 1 to countc(therapy, '/') + 1;    
+          ther = scan(therapy, i, '/');          %*  Take each compound in the current row of therapies ...; 
+          rc = pat_thers.ref();                  %*   ... and add it to the HASH if it does not already exist;
+        end;
+
+        if last.date then do;   %*  Output 1 row per date.;
+
+          rc = iter.first();    %*  Go through the hash ...;
+          do while (rc=0);
+            all_thers = catx('/', all_thers, ther);  %* ... and concat each therapy into one string, automatically deduped and in alpha order;
+            if findw(prim, ther, '/', 'it') then primary_ther = catx('/', primary_ther, ther);  %* Do same for primary_ther (with obvious checks);
+            rc = iter.next(); 
+          end;
+
+          if countc(primary_ther, '/') = 0 then primary_ther = '[ Indiv Compounds ]';
+          output;
+
+          num_scripts = 0;          %*  This section tidies up vars used above;
+          all_thers = '';           %*  Because of the main DO-UNTIL loop, many vars are seemingly;
+          rc = pat_thers.clear();   %*  RETAINED hence having to clear the vars by hand here;
+          prim = '';
+          primary_ther = '';
         end;
       end;
-
-      else do i = 1 to countc(therapy, '/') + 1;    %*  Take each compound in the current row of therapies ...;
-        ther_unit = scan(therapy, i, '/');
-
-        do j = 1 to countc(all_thers, '/') + 1;     %*  ... and see if is already in the on-running list of thers for that day;
-          all_ther_unit = scan(all_thers, j, '/');
-
-          if strip(lowcase(ther_unit)) = strip(lowcase(all_ther_unit)) then drop_flag = 1;  %*  If so, flag it to drop at the end of DO;
-        end;
-        if not drop_flag then all_thers = catx('/', all_thers, ther_unit);
-      end;
-
-      if last.date then output;
+      stop;
     run;
 
     %*  Output a day for each therapy but, if the therapy is a combination, output it *and* its subsets;
     %*  For example, if ICS/LABA/LAMA, 7 rows will be output - the triple therapy, three dual therapies;
     %*  and then the three individual therapies;
-    data m_combo3_a_row_per_day_per_combo(keep = patid date ther_combo max_thers_for_day num_thers pd_len primary_ther);
-      set m_combo2_dedupe_therapies;
-      array a[50] $50 _temporary_;    %*  At most, 50 different therapies can be combined;
+    data m_combo2_1_row_per_day_per_combo(keep = patid date ther_combo max_thers_for_day Num_comps num_scripts pd_len primary_ther);
+      set m_combo1_dedupe_therapies;
+      array a[10] $50 _temporary_;    %*  At most, 10 different therapies can be combined;
+
       attrib ther_combo         length = $15   label = "Ther_Combo: Therapy combination";
       attrib max_thers_for_day  length = 3     label = "Max_thers_for_day: Total num thers for date";
-      attrib num_thers          length = 3     label = "Num_thers: Num thers for combo";
+      attrib Num_comps          length = 3     label = "Num_comps: Num compounds in combo";
+
+      call missing (of a[*]);
 
       max_thers_for_day = countc(all_thers, '/') + 1;
 
-      do i = 1 to 50;      
-        if i le max_thers_for_day then a[i] = scan(all_thers, i, '/');  %* Copy each compound into an array cell...;
-        else a[i] = '';                                                 %* ...else ensure the array cell is empty;
+      do i = 1 to max_thers_for_day;      
+        a[i] = scan(all_thers, i, '/');  %* Copy each compound into an array cell...;
       end;
 
-      if max_thers_for_day > 1 then do num_thers = 1 to max_thers_for_day;    **  Loop for the no of compounds on the day;
-        do k = 1 to comb(max_thers_for_day, num_thers);   %*  Loop through each combination (incl subsets);
-          call lexcomb(k, num_thers, of a[*]);            %*  Get the combination of compounds (array cells are rearranged);
+      if max_thers_for_day > 1 then do Num_comps = 1 to max_thers_for_day;    **  Loop for the num compounds on the day;
+        do k = 1 to comb(max_thers_for_day, Num_comps);   %*  Loop through each combination (incl subsets);
+          call lexcomb(k, Num_comps, of a[*]);            %*  Get the combination of compounds (array cells are rearranged);
 
           ther_combo = '';                                %*  This var will hold final arrangement of compounds.  Ensure empty;
-          do m = 1 to num_thers;                          %*  In loop, alphabetically join the combinations together;
+          do m = 1 to Num_comps;                          %*  In loop, alphabetically join the combinations together;
             ther_combo = catx('/', ther_combo, a[m]);
           end;
           output;
@@ -213,7 +212,7 @@
         end;
       end;
       else do;                                             %*  Simply output row if only 1 compound for the day;
-        num_thers = 1; 
+        Num_comps = 1; 
         ther_combo = all_thers; 
         output; 
       end;
@@ -227,14 +226,13 @@
     %*  The therapy listed will be the most complex for that day (in terms of the number of compounds) ;
     %**************************************************************************************************;
 
-    %*  Keep the most complex therapy (see the WHERE stmt).  The therapy listed on this day will be the;
-    %*  most complex one (ie. the highest order of indiv therapies).  Create vars flagging different trtmt;
+    %*  Keep the most complex therapy (see the WHERE stmt).  Create vars flagging different trtmt;
     %*  blocks or when a patient changed therapy;
-    data m_combo4_a_row_per_ther_day;
-      set m_combo3_a_row_per_day_per_combo(where=(num_thers = max_thers_for_day));
+    data m_combo3_1_row_per_ther_day;
+      set m_combo2_1_row_per_day_per_combo(where=(Num_comps = max_thers_for_day));
       by patid date ther_combo;
 
-      attrib switch_num     length = 5    label = "Switch_num: Shows a switch in trtmt.  Final pat val = Total Changes.";
+      attrib switch_num     length = 5    label = "Switch_num: Shows a switch in trtmt.  Final val in pat = Total Changes.";
       attrib switched_from  length = $50  label = "Switched_from: Therapy the patient switched from.";
 
       if ther_combo ne lag(ther_combo) then do;
@@ -245,6 +243,12 @@
       attrib trtmt_blk length=5 label = "Trtmt_blk: Blocks of consec trtmt. Gap allowed is &gap_days day/s.";
       if date - &gap_days > lag(date) then trtmt_blk ++ 1;
 
+      attrib num_days length = 3 format = comma6. label = 'Num_Days: Length in days of pd';
+      num_days = 1;
+
+      attrib prop_days length = 3 format = 5.2 label = 'Prop_Days: Proportion of days relative to total pd for pat';
+      prop_days = 1/pd_len;   **  No point labeling var as it is dropped in the proc summary below;
+
       **  Ensure the vars are reset when starting a new patient;
       if first.patid then do; 
         switch_num = 0; 
@@ -254,24 +258,13 @@
     run;
 
     %*  The dataset above can be very large so summarise ensuring days of switching and trtmt blocks are recorded;
-    proc summary data = m_combo4_a_row_per_ther_day nway;
+    proc summary data = m_combo3_1_row_per_ther_day nway;
       by patid;
       class switch_num trtmt_blk ;
-      id ther_combo pd_len num_thers switched_from primary_ther;
-      var date;
-      output out = &out_prim(rename=(_freq_ = num_days) drop=_t:) min(date) = ther_start max(date) = ther_end;
-    run;
-
-    %*  Create a variable with the proportion of time from the pd;
-    data &out_prim(label = "One row per trtmt change or change in continuous meds (Gap allowed is &gap_days day/s).  See model prog for example analysis code");
-      set &out_prim;
-
-      attrib prop_days length = 3 format = 5.2 label = 'Prop_Days: Proportion of days relative to total pd for pat';
-      label num_days = "Num_days: Number of days";
-      prop_days = num_days / pd_len;
-
-    proc sort;
-      by patid switch_num trtmt_blk;
+      id ther_combo pd_len Num_comps switched_from primary_ther;
+      var date prop_days num_days num_scripts;
+      output out = &out_prim(label = "One row per trtmt change or change in cont medication (Gap allowed is &gap_days day/s).  See model prog for example analysis code"
+                    drop=_:) min(date) = ther_start max(date) = ther_end sum(prop_days) = prop_days sum(num_days) = num_days max(num_scripts) = num_scripts;
     run;
 
     %********************************************************************************************;
@@ -282,40 +275,36 @@
     %********************************************************************************************;
    
     %*  Within therapies, sort the events by date;
-    proc sort data = m_combo3_a_row_per_day_per_combo out = m_combo6_incl_therapies;
+    proc sort data = m_combo2_1_row_per_day_per_combo out = m_combo4_incl_therapies;
       by patid ther_combo date;
     run;
 
     %*  As before, create a variable indicating consecutive trtmt blocks;
     %*  NOTE: A switch var is not made as it does not make much sense here;
-    data m_combo6_incl_therapies;
-      set m_combo6_incl_therapies;
+    data m_combo4_incl_therapies;
+      set m_combo4_incl_therapies;
       by patid ther_combo;
 
       attrib trtmt_blk length=5 label = "trtmt_blk: Blocks of consec trtmt (within trtmt). Gap allowed is &gap_days day/s.";
       if date - &gap_days > lag(date) then trtmt_blk ++ 1;
+
+      attrib num_days length = 3 format = comma6. label = 'Num_Days: Length in days of pd';
+      num_days = 1;
+
+      attrib prop_days length = 3 format = 5.2 label = 'Prop_Days: Proportion of days relative to total pd for pat';
+      prop_days = 1/pd_len;   **  No point labeling var as it is dropped in the proc summary below;
+
       if first.ther_combo then trtmt_blk = 1;
     run;
 
     %*  Create start and end dates for each trtmt * trmt_block combination.  Also count the number of days;
-    proc summary data = m_combo6_incl_therapies nway;
+    proc summary data = m_combo4_incl_therapies nway;
       by patid;
       class ther_combo trtmt_blk;
-      id pd_len num_thers primary_ther;
+      id pd_len Num_comps primary_ther;
       var date;
-      output out = &out_sec(rename=(_freq_ = num_days) drop=_t:) min(date) = ther_start max(date) = ther_end;
-    run;
-
-    %*  Finally, create a variable with the proportion of time from the pd;
-    data &out_sec(label = "One row per change in continuous meds (Gap = &gap_days day/s).  TRTMTS OVERLAP IN THIS OUTPUT. See model prog for example analysis code");
-      set &out_sec;
-
-      attrib prop_days length = 3 format = 5.2 label = 'Prop_Days: Proportion of days relative to total pd for pat';
-      label num_days = "Num_days: Number of days";
-      prop_days = num_days / pd_len;
-
-    proc sort;
-      by patid ther_start trtmt_blk ther_combo;
+      output out = &out_sec(label = "One row per change in continuous meds (Gap = &gap_days day/s).  TRTMTS OVERLAP IN THIS OUTPUT. See model prog for example analysis code"
+                             drop = _:) min(date) = ther_start max(date) = ther_end sum(prop_days) = prop_days sum(num_days) = num_days;
     run;
 
     %*  Delete interim datasets;

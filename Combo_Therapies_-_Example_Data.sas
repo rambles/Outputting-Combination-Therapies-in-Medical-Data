@@ -82,6 +82,7 @@
 
     patid = 1;
     thergrp = 'ics';            ther_start = "03DEC1999"d; ther_end = "29DEC1999"d; output;
+    thergrp = 'laba/ics';       ther_start = "30DEC1999"d; ther_end = "14JAN2000"d; output;
     thergrp = 'ics/laba';       ther_start = "30DEC1999"d; ther_end = "14JAN2000"d; output;
     thergrp = 'lama';           ther_start = "04JAN2000"d; ther_end = "23JAN2000"d; output;
     thergrp = 'laba';           ther_start = "12JAN2000"d; ther_end = "14FEB2000"d; output;
