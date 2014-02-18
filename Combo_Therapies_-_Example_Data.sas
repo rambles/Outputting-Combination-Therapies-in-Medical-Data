@@ -118,20 +118,18 @@
   **  NOTE: Make sure a text copy of the therapy group variable is made (var = therapy);
   ****************************************************************************************;
 
-  data combo2_one_row_per_day_per_ther(keep = patid date pd_len num_thers therapy);
+  data combo2_one_row_per_day_per_ther(keep = patid date pd_len therapy);
     merge combo1b_ther_lvl(in = a) combo1a_pat_lvl(in = b keep = patid obs_start obs_end);
     by patid;
 
     attrib date       length = 5    format = date11. ;
     attrib therapy    length = $15  label = 'Therapy: Indivdual therapies';
     attrib pd_len     length = 3    label = "Pd_Len: Num days of patient pd.";
-    attrib num_thers  length = 3    label = "Num_thers: Num thers for combo";
     retain pd_len .;
 
     if first.patid then pd_len = obs_end - obs_start + 1;
-/*    therapy = strip(put(thergrp, thergrp.));  ** Alternative if therpy var is numeric and formatted.;*/
     therapy = therGrp;
-    num_thers = countc(therapy, '/') + 1;
+/*    therapy = strip(put(thergrp, thergrp.));  ** Alternative if therpy var is numeric and formatted.;*/
 
     **  Taking into account the analysis pd, output a row for each day each script covers; 
     if a and b then do date = max(obs_start, ther_start) to min(obs_end, ther_end);

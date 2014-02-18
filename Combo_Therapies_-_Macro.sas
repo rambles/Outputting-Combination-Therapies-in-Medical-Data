@@ -74,16 +74,19 @@
   | Both        | num_days       | Number of days
   | Both        | prop_days      | Proportion of days relative to total pd for pat
   | Both        | ther_combo     | Therapy combination
-  | Both        | Num_comps      | Num thers for combo
+  | Both        | num_comps      | Num compounds in combo
+  | Both        | num_scripts    | Num scripts contributing to the combo.  Duplicates 
+                                   are counted if there are duplicates in the original data 
   | Both        | ther_start     | Start date of therapy combo
   | Both        | ther_end       | End date of therapy combo
   | Both        | trtmt_blk      | Blocks of consec trtmt. Gap allowed is *xx* day/s.
-  | Primary     | switch_num     | Shows a switch in trtmt.
-  | Primary     | switched_from  | Therapy the patient switched from.
   | Both        | primary_ther   | Shows the most complex original script of the pd. E.g. 
                                    if ther_combo = ICS/LABA - and primary_ther = ICS/LABA too - 
                                    we know patient directly receivd ICS/LABA rather than 
                                    separate ICS & LABA scripts.
+
+  | Primary     | switch_num     | Shows a switch in trtmt.
+  | Primary     | switched_from  | Therapy the patient switched from.
 
   ### Switching and treatment blocks
 
@@ -128,14 +131,19 @@
   %macro create_combi_thers(data = combo2a_PDC_row_per_day_per_ther, gap_days = 1, out_prim =, out_sec =);
 
     %*  Uncomment when debugging;
-    %let data = combo2a_PDC_row_per_day_per_ther;
-    %let out_prim = m_row_per_trtmt_change_or_brk;
-    %let out_sec = m_summarised_inclusive_thers;
-    %let gap_days = 1;
+/*    %let data = combo2a_PDC_row_per_day_per_ther;*/
+/*    %let out_prim = m_row_per_trtmt_change_or_brk;*/
+/*    %let out_sec = m_summarised_inclusive_thers;*/
+/*    %let gap_days = 1;*/
+
+    %*  Ensure the data is sorted by patid and date;
+    proc sort data = &data;
+      by patid date;
+    run;
 
     %*  Join together all therapy compounds per day into one string.  The HASH ensures the compounds;
     %*  are deduped and joing in alphabetical order.  Output is 1 row per patient per day.; 
-    data m_combo1_dedupe_therapies (drop = i rc ther therapy prim Num_comps);
+    data m_combo1_dedupe_therapies (drop = i rc ther therapy prim);
       length ther prim primary_ther $30 all_thers $120;
 
       attrib primary_ther length = $30 label = "Primary_Ther: Most complex original script for pd to check dual/ther compounds origin.";
@@ -243,13 +251,13 @@
       attrib trtmt_blk length=5 label = "Trtmt_blk: Blocks of consec trtmt. Gap allowed is &gap_days day/s.";
       if date - &gap_days > lag(date) then trtmt_blk ++ 1;
 
-      attrib num_days length = 3 format = comma6. label = 'Num_Days: Length in days of pd';
+      attrib num_days length = 3 format = comma6. label = 'Num_Days: Number of Days';
       num_days = 1;
 
-      attrib prop_days length = 3 format = 5.2 label = 'Prop_Days: Proportion of days relative to total pd for pat';
+      attrib prop_days length = 3 format = 5.2 label = 'Prop_Days: Prop of days relative to total pd for pat';
       prop_days = 1/pd_len;   **  No point labeling var as it is dropped in the proc summary below;
 
-      **  Ensure the vars are reset when starting a new patient;
+      **  Ensure the vars receiving lagged results are reset when starting a new patient;
       if first.patid then do; 
         switch_num = 0; 
         switched_from = ""; 

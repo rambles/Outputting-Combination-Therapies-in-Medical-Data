@@ -62,7 +62,7 @@
     output out = out2_num_switches(drop=_:) max(switch_num) = num_switches;
   run;
 
-  **   - Time to first switch
+  **   - Time to first switch;
   proc print data = pdc_row_per_trtmt_change_or_brk  label; 
     Title1 "2a. Number of days from initial treatment to first switch."; 
     title2 "Source: Primary output dataset";
@@ -141,7 +141,7 @@
   run;
 
   **  Repeat above but using the primary data.  This will produce a different result;
-  proc means data = pdc_row_per_trtmt_change_or_brk nway missing maxdec=0 sum n max min mean nonobs;
+  proc means data = _pdc_row_per_trtmt_change_or_brk nway missing maxdec=0 sum n max min mean nonobs;
     title1 "4b. Summary of trtmt blocks for ICS/LABA by patient - Primary output dataset!.";
     title2 "Source: Primary output dataset";
     title3 "This example is as above but shows different results as it is from the primary output dataset";
