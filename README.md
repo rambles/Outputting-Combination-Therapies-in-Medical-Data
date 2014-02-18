@@ -38,13 +38,14 @@ The following table lists the output variables and the datasets they are output 
 | Both |num\_days | Number of days
 | Both |prop\_days | Proportion of days relative to total pd for pat
 | Both |ther\_combo | Therapy combination
-| Both |num\_thers | Num thers for combo
+| Both |num\_comps | Num compounds in combo
+| Both |num\_scripts | Num scripts contributing to the combo.  Duplicates are counted if there are duplicates in the original data 
 | Both |ther\_start | Start date of therapy combo
 | Both |ther\_end |  End date of therapy combo
 | Both |trtmt\_blk | Blocks of consec trtmt. Gap allowed is *xx* day/s.
-| Primary |switch\_num | Shows a switch in trtmt.
+| Primary |switch\_num | Shows a switch in trtmt
 | Primary |switched\_from | Therapy the patient switched from.
-| Both |primary\_ther | Shows the most complex original script of the pd. E.g. if ther_combo = ICS/LABA - and primary_ther = ICS/LABA too - we know patient directly receivd ICS/LABA rather than separate ICS & LABA scripts.
+| Both |primary\_ther | Shows the most complex original script of the pd. E.g. if ther_combo = ICS/LABA - and primary_ther = ICS/LABA too - we know patient directly receivd ICS/LABA rather than separate ICS & LABA scripts
 
 ### Switching and treatment blocks
 
