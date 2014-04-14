@@ -129,7 +129,7 @@
 
     if first.patid then pd_len = obs_end - obs_start + 1;
     therapy = therGrp;
-/*    therapy = strip(put(thergrp, thergrp.));  ** Alternative if therpy var is numeric and formatted.;*/
+/*    therapy = strip(put(thergrp, thergrp.));  ** Alternative if therapy var is numeric and formatted.;*/
 
     **  Taking into account the analysis pd, output a row for each day each script covers; 
     if a and b then do date = max(obs_start, ther_start) to min(obs_end, ther_end);
