@@ -1,11 +1,11 @@
 ### Purpose
 
-The core of the porject is a SAS macro that takes a dataset of therapies - with start and end dates - to determine where the therapies overlap and output all therapy combinations.  
+The core of the project is a SAS macro that takes a dataset of therapies - with start and end dates - to determine where the therapies overlap and output all therapy combinations.  
 
 ### Programs
 There are three programs in the project; one with the macro and two support files with example data and analysis code.
 
-The header of each file provides is sufficient for use.  However, the header for the macro file itself is dense so much of it is repeated here for easier reading.
+The header of each file is sufficient for use.  However, the header for the macro file itself is dense so much of it is repeated here for easier reading.
 
 ### Macro
 
@@ -27,7 +27,7 @@ The **secondary output** dataset is much the same but lists all lower-order comp
 
 This second dataset can helps answer certain types of questions (see example code for details) though it's likely most analyses will only need the primary output.  
 
-> **Note:** switch variables are not output in the secondary dataset as switching does not make sense when looking at inclusive/overlapping dates.
+> **Note:** Switch variables are not output in the secondary dataset as switching does not make sense when looking at inclusive/overlapping dates.
 
 The following table lists the output variables and the datasets they are output to.
 
@@ -76,4 +76,4 @@ In contrast to above, the overlapped days would be counted for each script so, w
 
   In practice, this means a total MPR value for a patient can exceed 1.
 
-In general, the PDC approach is most often used.
+The results are appropriate for fixed period analysis only (e.g. MPR/PDC in the year after index).  It's up to the analyst to be sure each patient was eligible for the fixed period.
